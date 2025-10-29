@@ -1,0 +1,46 @@
+//kql query
+
+let Lookback = 1h;
+let RiskyUser =
+IdentityInfo
+| where Timestamp > ago(Lookback)
+| where RiskStatus == "AtRisk" and ChangeSource == "AzureActiveDirectory"
+| where RiskLevel == "Medium" or RiskLevel == "High"
+| distinct AccountUpn;
+OAuthAppInfo
+| where AddedOnTime > ago(Lookback)
+| where VerifiedPublisher == "{}"
+| distinct AddedOnTime, AppName, OAuthAppId
+| join CloudAppEvents on $left.OAuthAppId == $right.ObjectId
+| where ActionType == "Consent to application."
+| extend UPN = tostring(RawEventData.UserId)
+| where UPN has_any (RiskyUser)
+
+
+//splunk query
+
+| search sourcetype=IdentityInfo 
+    earliest=-1h 
+    RiskStatus="AtRisk" 
+    ChangeSource="AzureActiveDirectory" 
+    (RiskLevel="Medium" OR RiskLevel="High") 
+| stats dc(AccountUpn) as dummy by AccountUpn 
+| fields AccountUpn 
+| rename AccountUpn as RiskyUser 
+| search sourcetype=OAuthAppInfo 
+    earliest=-1h 
+    VerifiedPublisher="{}" 
+| stats values(AddedOnTime) as AddedOnTime values(AppName) as AppName by OAuthAppId 
+| join type=inner where OAuthAppId=ObjectId [ 
+    search sourcetype=CloudAppEvents 
+    ActionType="Consent to application." 
+    | eval UPN=tostring(RawEventData.UserId) 
+] 
+| where in(UPN, [ search sourcetype=IdentityInfo earliest=-1h RiskStatus="AtRisk" ChangeSource="AzureActiveDirectory" (RiskLevel="Medium" OR RiskLevel="High") | fields AccountUpn | format ])
+```This SPL attempts to replicate the KQL logic: 
+- Find risky users in the last hour from IdentityInfo
+- Find OAuth apps with unverified publisher in the last hour
+- Join with CloudAppEvents where consent was granted
+- Filter to events where the user is in the risky user list
+- Note: Field mappings (e.g., ObjectId, RawEventData.UserId) may need adjustment for your environment
+- If your environment uses data models, consider replacing raw sourcetype searches with tstats/datamodel equivalents for performance.```

@@ -1,0 +1,28 @@
+| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time) as lastTime 
+    from datamodel=Endpoint.Registry 
+    where 
+        Registry.action=modified 
+        Registry.registry_key="*\\SOFTWARE\\Classes\\CLSID\\{AA509086-5Ca9-4C25-8F95-589D3C07B48A}\\InProcServer32" 
+        (Registry.registry_path="*HKEY_CURRENT_USER*" OR Registry.registry_path="*HKCU*") 
+        Registry.registry_value_name="(default)" 
+    by Registry.dest Registry.user Registry.registry_key Registry.registry_value_name Registry.registry_value_data Registry.process_id Registry.process_guid Registry.process_path Registry.process_name 
+| search Registry.registry_value_data="*AppData*\\*.dll" OR Registry.registry_value_data="*Temp*\\*.dll" OR Registry.registry_value_data="*ProgramData*\\*.dll" OR Registry.registry_value_data="*Public*\\*.dll" OR Registry.registry_value_data="*Users\\*\\*.dll" 
+| eval risk_score=75 
+| eval principal_hostname=Registry.dest 
+| eval principal_user_userid=Registry.user 
+| eval principal_process_pid=Registry.process_id 
+| eval principal_process_command_line=Registry.process_path 
+| eval principal_process_file_full_path=Registry.process_path 
+| eval registry_key=Registry.registry_key 
+| eval registry_value=Registry.registry_value_data 
+| fields firstTime, lastTime, principal_hostname, principal_user_userid, principal_process_pid, principal_process_command_line, principal_process_file_full_path, registry_key, registry_value, risk_score 
+``` 
+Description: Detects Component Object Model (COM) hijacking used by the ForumTroll APT group for persistence. This rule identifies modifications to the registry where a malicious DLL is registered to be loaded by legitimate processes by overriding the CLSID for twinapi.dll in the HKEY_CURRENT_USER hive. 
+Author: detections.ai 
+Date: 2025-10-27 
+Reference: https://securelist.com/forumtroll-apt-hacking-team-dante-spyware/117851/ 
+Tags: WINDOWS, PERSISTENCE, COM_HIJACKING, FORUMTROLL 
+MITRE Tactic: TA0003 
+MITRE Technique: T1546.015 
+False Positives: Legitimate software installers or updaters might modify COM registry keys. However, modification in the HKCU hive for a system component like twinapi.dll, pointing to a user-writable directory, is highly suspicious. Tuning may be required based on processes that legitimately perform such actions in specific environments. 
+```

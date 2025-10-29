@@ -1,0 +1,26 @@
+//splunk query
+
+search index=windows sourcetype=wineventlog
+    "ProcessCommandLine"="conhost.exe --headless*"
+    ("ProcessCommandLine"="*powerhshell.exe*" OR "ProcessCommandLine"="*pwsh.exe*" OR "ProcessCommandLine"="*pwsh.dll*")
+    ("ProcessCommandLine"="*-e*" OR "ProcessCommandLine"="*-EncodedCommand*")
+| rex field=ProcessCommandLine "(?<five_spaces> {5,})"
+| rex field=ProcessCommandLine "(?<unc_path>\\\\[a-zA-Z0-9\-\.]+\\[a-zA-Z0-9\-\.$_]+)"
+| where isnotnull(five_spaces) AND isnotnull(unc_path)
+```Exif smuggling FileFix Technique```
+```Checks for Encoded Command```
+```Checks if more than 5 Spaces are in the Command```
+```Checks if a UNC Path is in the Command```
+
+//KQL query
+
+//Exif smuggling FileFix Technique
+DeviceProcessEvents
+| where ProcessCommandLine startswith "conhost.exe --headless"
+| where ProcessCommandLine has_any ("powerhshell.exe", "pwsh.exe", "pwsh.dll")
+//Checks for Encoded Command
+| where ProcessCommandLine has "-e" or ProcessCommandLine has "-EncodedCommand"
+//Checks if more than 5 Spaces are in the Command 
+| where ProcessCommandLine matches regex " {5,}"
+//Checks if a UNC Path is in the Comand
+| where ProcessCommandLine matches regex @"\\\\([a-zA-Z0-9\-\.]+)\\[a-zA-Z0-9\-\.$_]+"

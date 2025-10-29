@@ -1,0 +1,36 @@
+//kql
+
+let loopback = 1h;
+//Add your IPRange to minimize the Results
+let OwnIPRange = "xx.xx";
+let UserClicks = UrlClickEvents
+| where Timestamp > ago(loopback)
+| where IPAddress !startswith (OwnIPRange)
+| project TimestampUrlClick=Timestamp, AccountUpn;
+AADSignInEventsBeta
+| where isnotempty(RiskEventTypes) and isnotempty(RiskLevelDuringSignIn) 
+| where ErrorCode == 0 
+| join kind=inner UserClicks on AccountUpn
+| where RiskLevelDuringSignIn >= 50
+| where Timestamp > TimestampUrlClick
+
+
+//splunk
+search sourcetype=UrlClickEvents 
+    earliest=-1h latest=now 
+    | where NOT like(IPAddress, "xx.xx%") 
+    | fields Timestamp, AccountUpn 
+    | eval TimestampUrlClick=Timestamp 
+    | fields TimestampUrlClick, AccountUpn 
+    | rename AccountUpn as UserClicks_AccountUpn, TimestampUrlClick as UserClicks_TimestampUrlClick 
+| join type=inner where AccountUpn=UserClicks_AccountUpn [ 
+    search sourcetype=AADSignInEventsBeta 
+        earliest=-1h latest=now 
+        | where isnotnull(RiskEventTypes) AND isnotnull(RiskLevelDuringSignIn) 
+        | where ErrorCode=0 
+        | where RiskLevelDuringSignIn>=50 
+        | fields Timestamp, AccountUpn, RiskEventTypes, RiskLevelDuringSignIn, ErrorCode 
+] 
+| where Timestamp > UserClicks_TimestampUrlClick 
+```Add your IPRange to minimize the Results```
+

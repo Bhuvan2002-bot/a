@@ -1,0 +1,5 @@
+search RemoteUrl!=""
+| where like(RemoteUrl, "%E2%80%AE%") OR like(RemoteUrl, "%E2%80%8E%") OR like(RemoteUrl, "%E2%80%8F%")
+| fields Timestamp, DeviceName, DeviceId, RemoteUrl, ActionType, InitiatingProcessFileName, RemoteIP, RemotePort, ReportId
+| rex field=RemoteUrl max_match=0 "(%E2%80%AE|%E2%80%8E|%E2%80%8F)"
+| eval Bidi_Character_Found=if(isnull(_raw), null(), mvindex(_raw, 0))

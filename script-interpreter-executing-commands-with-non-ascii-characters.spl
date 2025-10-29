@@ -1,0 +1,9 @@
+| search index=* (FileName="/bin/bash" OR FileName="/bin/sh" OR FileName="/bin/zsh" OR FileName="/usr/bin/python" OR FileName="/usr/bin/python3" OR FileName="/usr/bin/perl" OR FileName="/usr/bin/ruby" OR FileName="/usr/bin/osascript" OR FileName="/usr/bin/php" OR FileName="powershell.exe" OR FileName="pwsh.exe" OR FileName="cmd.exe" OR FileName="wscript.exe" OR FileName="cscript.exe" OR FileName="mshta.exe" OR FileName="regsvr32.exe" OR FileName="rundll32.exe")
+| eval has_cyrillic=if(match(ProcessCommandLine, "[\u0400-\u04FF]"), 1, 0)
+| eval has_arabic=if(match(ProcessCommandLine, "[\u0600-\u06FF]"), 1, 0)
+| eval has_chinese=if(match(ProcessCommandLine, "[\u4e00-\u9fff]"), 1, 0)
+| where has_cyrillic=1 OR has_arabic=1 OR has_chinese=1
+```Script interpreters: /bin/bash, /bin/sh, /bin/zsh, /usr/bin/python, /usr/bin/python3, /usr/bin/perl, /usr/bin/ruby, /usr/bin/osascript, /usr/bin/php, powershell.exe, pwsh.exe, cmd.exe, wscript.exe, cscript.exe, mshta.exe, regsvr32.exe, rundll32.exe
+Detects script interpreter process launches with command lines containing Cyrillic, Arabic, or Chinese characters.
+MITRE ATT&CK: T1059, T1036
+```

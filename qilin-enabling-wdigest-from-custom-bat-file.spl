@@ -1,0 +1,7 @@
+search event_type=REGISTRY 
+    event_sub_type=REGISTRY_SET_VALUE 
+    action_registry_key_name="*WDigest*" 
+    action_registry_value_name="UseLogonCredential" 
+    action_registry_data="1" 
+    actor_process_image_name="*light*.bat" 
+| fields _time, agent_hostname, actor_effective_username, actor_process_image_name, actor_process_image_command_line, action_registry_key_name, action_registry_value_name, action_registry_data
